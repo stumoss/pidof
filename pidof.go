@@ -5,13 +5,16 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 const proc_dir = "/proc"
 
 func main() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
 	if len(os.Args) < 2 || len(os.Args) > 2 {
 		os.Exit(1)
 	}
@@ -27,9 +30,15 @@ func main() {
 		fmt.Println("unable to read /proc directory.")
 	}
 
+	var wg sync.WaitGroup
 	for _, file := range files {
-		checkProcName(proc_name, file)
+		wg.Add(1)
+		go func(proc_name string, file os.FileInfo) {
+			defer wg.Done()
+                        checkProcName(proc_name, file)
+		}(proc_name, file)
 	}
+	wg.Wait()
 }
 
 func checkProcName(proc_name string, file os.FileInfo) {
